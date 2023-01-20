@@ -2,6 +2,9 @@
 
 pragma solidity >=0.8.0 <0.9.0;
 
+/**
+    XXX venus protocol의 vtoken에 대한 interface
+ */
 interface IVToken {
 
     function isVToken() external view returns (bool);

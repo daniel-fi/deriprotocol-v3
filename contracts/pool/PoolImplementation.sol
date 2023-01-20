@@ -131,6 +131,7 @@ contract PoolImplementation is PoolStorage, NameVersion {
     }
 
     function addMarket(address market) external _onlyAdmin_ {
+        // XXX ex> market: vUSDT, underlying USDT
         // underlying is the underlying token of Venus market
         address underlying = IVToken(market).underlying();
         require(
@@ -313,6 +314,7 @@ contract PoolImplementation is PoolStorage, NameVersion {
         emit RemoveLiquidity(data.tokenId, underlying, amount, newLiquidity);
     }
 
+    // XXX front의 deposit action에서 호출 (https://github.com/deri-protocol/source-deri.fi/blob/9f95832efcc5436a624f5c355d828481c5cb2111/deri-lite/src/lib/web3js/v3/api/transaction_api.js#L123)
     // amount in underlying's own decimals
     function addMargin(address underlying, uint256 amount, OracleSignature[] memory oracleSignatures) external payable _reentryLock_
     {
@@ -370,6 +372,7 @@ contract PoolImplementation is PoolStorage, NameVersion {
         emit RemoveMargin(data.tokenId, underlying, amount, newVaultLiquidity.utoi() + data.amountB0);
     }
 
+    // XXX deri protocol은 모든 거래를 trade method에서 처리
     function trade(string memory symbolName, int256 tradeVolume, int256 priceLimit, OracleSignature[] memory oracleSignatures) external _reentryLock_
     {
         _updateOracles(oracleSignatures);
