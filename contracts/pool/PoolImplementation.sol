@@ -315,6 +315,7 @@ contract PoolImplementation is PoolStorage, NameVersion {
     }
 
     // XXX front의 deposit action에서 호출 (https://github.com/deri-protocol/source-deri.fi/blob/9f95832efcc5436a624f5c355d828481c5cb2111/deri-lite/src/lib/web3js/v3/api/transaction_api.js#L123)
+    // XXX oracleSignatures: offchain oracle용 price data (onchain price feed만 사용하는 경우 무시해도 됨)
     // amount in underlying's own decimals
     function addMargin(address underlying, uint256 amount, OracleSignature[] memory oracleSignatures) external payable _reentryLock_
     {
@@ -328,10 +329,10 @@ contract PoolImplementation is PoolStorage, NameVersion {
         data.market = _getMarket(underlying);
         data.account = msg.sender;
 
-        _getTdInfo(data, true);
+        _getTdInfo(data, true); // XXX data에 계좌정보 loading (vault, b0 잔고)
         _transferIn(data, amount);
 
-        int256 newMargin = IVault(data.vault).getVaultLiquidity().utoi() + data.amountB0;
+        int256 newMargin = IVault(data.vault).getVaultLiquidity().utoi() + data.amountB0; // XXX USD로 환산한 갱신된 증거금
 
         TdInfo storage info = tdInfos[data.tokenId];
         info.vault = data.vault;
@@ -594,6 +595,8 @@ contract PoolImplementation is PoolStorage, NameVersion {
         }
     }
 
+    // XXX Pool:pToken:EOA = 1:1:N
+    // XXX pool은 EOA당 1개의 계좌를 관리하는 듯, 계좌당 vault존재 (_clone 참조)
     function _getTdInfo(Data memory data, bool createOnDemand) internal {
         data.tokenId = pToken.getTokenIdOf(data.account);
         if (data.tokenId == 0) {
@@ -647,9 +650,12 @@ contract PoolImplementation is PoolStorage, NameVersion {
         }
 
         if (data.underlying == address(0)) { // ETH
+            // XXX ETH는 deposit물량 전체를 vault에 입고
             v.mint{value: amount}();
         }
         else if (data.underlying == tokenB0) {
+            // XXX b0 token은 reserve 물량을 pool에 남기고 deposit 물량은 vault에 입고
+            // XXX 계좌정보(tdInfo)의 b0잔고 (amountB0)는 pool에 reserve된 물량을 관리하는 값
             uint256 reserve = amount * reserveRatioB0 / UONE;
             uint256 deposit = amount - reserve;
 
@@ -660,6 +666,7 @@ contract PoolImplementation is PoolStorage, NameVersion {
             data.amountB0 += reserve.rescale(data.decimalsUnderlying, 18).utoi(); // amountB0 is in decimals18
         }
         else {
+            // XXX b0 token이 아니면 deposit물량 전체를 vault에 입고
             IERC20(data.underlying).safeTransferFrom(data.account, data.vault, amount);
             v.mint(data.market, amount);
         }
